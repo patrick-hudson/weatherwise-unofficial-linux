@@ -102,10 +102,11 @@ menu entry.
 ## Releases and updates
 
 Releases are built by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)),
-so nothing needs to be built or signed locally:
+so nothing needs to be built or signed locally. Versions are CalVer,
+`YYYY.M.N` (N counts releases within the month), e.g. `2026.11.0`, `2026.11.1`:
 
 ```bash
-npm run release   # bumps the patch version, tags v<version>, pushes; CI builds + publishes
+npm run release   # next CalVer version (YYYY.M.N), tags v<version>, pushes; CI builds + publishes
 ```
 
 The workflow publishes `WeatherWise-<version>-x86_64.AppImage`, the `.rpm`,
