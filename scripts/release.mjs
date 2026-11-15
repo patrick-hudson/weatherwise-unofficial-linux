@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Cuts a CalVer release: YYYY.M.N (N counts releases within the month, from 0).
-// The version stays valid semver so electron-updater can compare versions.
+// Cuts a CalVer release: YYYY.M.DHHMM (UTC), e.g. 2026.11.142048 = Nov 14, 20:48 UTC.
+// The last part is a unique, increasing release id, so several releases can go out
+// the same day. It stays valid semver so electron-updater can compare versions.
 //
 //   npm run release            # bump, commit, tag v<version>, push → CI builds + publishes
 //   npm run release -- --dry-run
@@ -22,13 +23,12 @@ if (branch !== 'main') {
 
 run('git', ['pull', '--ff-only', '--tags']);
 const now = new Date();
-const prefix = `${now.getFullYear()}.${now.getMonth() + 1}.`;
-const used = git('tag', '--list', `v${prefix}*`)
-  .split('\n')
-  .filter(Boolean)
-  .map((t) => Number(t.slice(1 + prefix.length)))
-  .filter(Number.isInteger);
-const version = `${prefix}${used.length ? Math.max(...used) + 1 : 0}`;
+const pad = (n) => String(n).padStart(2, '0');
+const version = `${now.getUTCFullYear()}.${now.getUTCMonth() + 1}.${now.getUTCDate()}${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}`;
+if (git('tag', '--list', `v${version}`)) {
+  console.error(`v${version} already exists — wait a minute and try again.`);
+  process.exit(1);
+}
 
 console.log(`Releasing v${version}`);
 const current = JSON.parse(execFileSync('git', ['show', 'HEAD:package.json'], { encoding: 'utf8' })).version;
