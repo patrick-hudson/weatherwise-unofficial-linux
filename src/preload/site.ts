@@ -392,6 +392,147 @@ contextBridge.executeInMainWorld({
     };
     addEventListener('load', () => setTimeout(watchPrefs, 500));
 
+    // ---------- pop-out video (camera players) ----------
+    // The site's video.js players turn Picture-in-Picture off. We add a "Pop out"
+    // button that re-enables it and moves the live stream into its own floating
+    // window. While popped out, the in-app popup is hidden rather than closed (closing
+    // it would dispose the player); it comes back when the floating window closes.
+    const POP_ICON =
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1" fill="currentColor"/></svg>';
+    const hiddenHosts = new Map<HTMLVideoElement, { el: HTMLElement; vis: string; pe: string }>();
+
+    /** The floating popup window/modal that contains this video (to hide while popped out). */
+    const popupHost = (video: HTMLElement): HTMLElement | null => {
+      let best: HTMLElement | null = null;
+      for (let el = video.parentElement; el && el !== document.body; el = el.parentElement) {
+        const pos = getComputedStyle(el).position;
+        if ((pos === 'fixed' || pos === 'absolute') && el.offsetWidth >= video.offsetWidth && el.querySelector('button')) best = el;
+        if (pos === 'fixed') break;
+      }
+      return best;
+    };
+
+    const popOut = async (video: HTMLVideoElement) => {
+      try {
+        if (document.pictureInPictureElement === video) {
+          await document.exitPictureInPicture();
+          return;
+        }
+        if (video.readyState < 1 /* HAVE_METADATA */) {
+          toast("This camera isn't streaming right now — try again once the video is playing");
+          return;
+        }
+        video.disablePictureInPicture = false;
+        video.removeAttribute('disablepictureinpicture');
+        if (video.paused) await video.play().catch(() => {});
+        await video.requestPictureInPicture();
+        const host = popupHost(video);
+        if (host) {
+          hiddenHosts.set(video, { el: host, vis: host.style.visibility, pe: host.style.pointerEvents });
+          host.style.visibility = 'hidden';
+          host.style.pointerEvents = 'none';
+        }
+        toast('Video popped out — close its window to bring it back');
+      } catch (e) {
+        toast(`Can't pop out this video${(e as Error)?.message ? `: ${(e as Error).message}` : ''}`);
+      }
+    };
+
+    const restoreHost = (video: HTMLVideoElement) => {
+      const h = hiddenHosts.get(video);
+      if (!h) return;
+      hiddenHosts.delete(video);
+      if (h.el.isConnected) {
+        h.el.style.visibility = h.vis;
+        h.el.style.pointerEvents = h.pe;
+      }
+    };
+
+    const popButtons = new WeakMap<HTMLVideoElement, HTMLButtonElement>();
+    const hoverBound = new WeakSet<HTMLElement>();
+
+    /** video.js puts the class on the <video> too, so look for the wrapper *above* it. */
+    const playerWrap = (video: HTMLVideoElement) =>
+      ((video.parentElement?.closest('.video-js') as HTMLElement | null) ?? video.parentElement) as HTMLElement | null;
+
+    const makePopButton = (video: HTMLVideoElement) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.title = 'Pop out into its own window';
+      btn.dataset.wwlinuxPop = '1';
+      btn.innerHTML = `${POP_ICON}<span>Pop out</span>`;
+      btn.setAttribute(
+        'style',
+        'position:absolute;top:8px;right:8px;z-index:20;display:flex;align-items:center;gap:6px;padding:5px 10px;' +
+          'border-radius:6px;border:1px solid rgba(255,255,255,.35);background:rgba(23,39,79,.85);color:#fff;' +
+          'font:600 12px system-ui,sans-serif;cursor:pointer;opacity:0;transition:opacity .15s',
+      );
+      btn.addEventListener('focus', () => (btn.style.opacity = '1'));
+      (btn as any).__wwVideo = video;
+      video.addEventListener('leavepictureinpicture', () => restoreHost(video));
+      return btn;
+    };
+
+    // The site's popup swallows pointer events before they reach our button, so we
+    // handle them at the window in the capture phase. Our listeners are registered
+    // before any site script runs, so they fire first.
+    const popButtonFrom = (e: Event) => (e.target as Element | null)?.closest?.('button[data-wwlinux-pop]') as HTMLButtonElement | null;
+    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'touchstart']) {
+      w.addEventListener(type, (e: Event) => {
+        if (popButtonFrom(e)) e.stopImmediatePropagation();
+      }, true);
+    }
+    w.addEventListener('click', (e: Event) => {
+      const b = popButtonFrom(e);
+      if (!b) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const v = (b as any).__wwVideo as HTMLVideoElement | undefined;
+      if (v) void popOut(v);
+    }, true);
+
+    const decorateVideo = (video: HTMLVideoElement) => {
+      const wrap = playerWrap(video);
+      if (!wrap) return;
+      let btn = popButtons.get(video);
+      if (!btn) {
+        btn = makePopButton(video);
+        popButtons.set(video, btn);
+      }
+      if (btn.parentElement === wrap) return;
+      // (Re)attach — video.js wraps the <video> after the site first renders it.
+      if (getComputedStyle(wrap).position === 'static') wrap.style.position = 'relative';
+      wrap.append(btn);
+      if (!hoverBound.has(wrap)) {
+        hoverBound.add(wrap);
+        wrap.addEventListener('mouseenter', () => {
+          const b = popButtons.get(video);
+          if (b) b.style.opacity = '1';
+        });
+        wrap.addEventListener('mouseleave', () => {
+          const b = popButtons.get(video);
+          if (b) b.style.opacity = '0';
+        });
+      }
+    };
+
+    const scanVideos = () => {
+      for (const v of Array.from(document.querySelectorAll('video'))) {
+        // Skip tiny/decorative videos (e.g. looping promos); camera players are video.js.
+        if (v.closest('.video-js') || v.controls) decorateVideo(v as HTMLVideoElement);
+      }
+    };
+    let scanQueued = false;
+    new MutationObserver(() => {
+      if (scanQueued) return;
+      scanQueued = true;
+      requestAnimationFrame(() => {
+        scanQueued = false;
+        scanVideos();
+      });
+    }).observe(document, { childList: true, subtree: true });
+
     // ---------- saved places on the map ----------
     // The site bundles mapbox-gl as a private module, so there's no global to reach the
     // map. mapbox's Map constructor calls bindAll(..., this), i.e. Function.prototype.bind
@@ -401,6 +542,8 @@ contextBridge.executeInMainWorld({
     const DOT = 'wwlinux-places-dot';
     const LABEL = 'wwlinux-places-label';
     const maps = new Set<any>();
+    // Read-only accessor used by the app's own diagnostics.
+    Object.defineProperty(w, '__wwlinuxMaps', { value: () => Array.from(maps), configurable: false });
     let places: Place[] = [];
     let placesVersion = 0;
 

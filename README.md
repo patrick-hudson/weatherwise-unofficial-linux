@@ -39,6 +39,9 @@ notifications, a tray icon, and saved places that don't need an account.
   popups, scale bar and units, projection, rotation and tilt, day/night shading,
   and POI labels. They're synced both ways with the site's own **My
   Preferences** and **Map Settings**, which you can also open from Settings.
+- **Pop-out cameras**: traffic and hazard camera players get a **Pop out** button
+  that moves the live stream into its own floating window (Picture-in-Picture).
+  The in-app popup is tucked away until you close the floating window.
 - **Remembers where you were**: the map reopens at the same position, zoom and
   layers.
 - **Location without Google**: Chromium can't locate you on Linux, so the
@@ -66,7 +69,8 @@ notifications, a tray icon, and saved places that don't need an account.
   | Ctrl+, | Settings |
   | Ctrl+Q | Quit |
 
-Settings live in `~/.config/weatherwise-linux/config.json`. App data (login
+Settings live in `~/.config/weatherwise-linux/config.json`. Set
+`WEATHERWISE_LINUX_HOME=/some/dir` to run a completely separate profile, e.g. for testing. App data (login
 session, window state, alert history, last map view) lives in
 `~/.local/share/weatherwise-linux/`.
 

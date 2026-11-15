@@ -10,8 +10,13 @@ export const APP_ID = 'weatherwise-linux';
 export const SITE_URL = 'https://web.weatherwise.app/';
 export const SITE_ORIGIN = 'https://web.weatherwise.app';
 
-export const configDir = path.join(xdgConfig, APP_ID);
-export const dataDir = path.join(xdgData, APP_ID);
+/**
+ * WEATHERWISE_LINUX_HOME=<dir> runs a fully separate profile (config + data +
+ * single-instance lock) — handy for testing next to your everyday instance.
+ */
+const profileHome = process.env.WEATHERWISE_LINUX_HOME ? path.resolve(process.env.WEATHERWISE_LINUX_HOME) : null;
+export const configDir = profileHome ? path.join(profileHome, 'config') : path.join(xdgConfig, APP_ID);
+export const dataDir = profileHome ? path.join(profileHome, 'data') : path.join(xdgData, APP_ID);
 export const configFile = path.join(configDir, 'config.json');
 export const windowStateFile = path.join(dataDir, 'window-state.json');
 export const alertStateFile = path.join(dataDir, 'alerts-state.json');
