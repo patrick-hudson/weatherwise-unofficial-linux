@@ -98,3 +98,20 @@ menu entry.
   [`@particle/dbus-next`](https://www.npmjs.com/package/@particle/dbus-next),
   used for geoclue and notifications. Town search sends only the typed name to
   the Open-Meteo geocoding API.
+
+## Releases and updates
+
+Releases are built by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)),
+so nothing needs to be built or signed locally:
+
+```bash
+npm run release   # bumps the patch version, tags v<version>, pushes; CI builds + publishes
+```
+
+The workflow publishes `WeatherWise-<version>-x86_64.AppImage`, the `.rpm`,
+and `latest-linux.yml` with blockmaps to a GitHub Release.
+
+- **AppImage:** checks for a new release at startup and every 6 hours (or
+  tray → *Check for Updates…*). It downloads only the changed blocks in the
+  background and swaps itself in when you restart.
+- **RPM:** tells you when a new version is out and links to the download.

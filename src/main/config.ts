@@ -32,6 +32,8 @@ export interface Config {
     autostart: boolean;
     zoom: number;
     alwaysOnTop: boolean;
+    /** Check GitHub Releases for updates (AppImage installs them automatically). */
+    autoUpdate: boolean;
   };
   /** Saved places (managed in Settings → Places and from the map's right-click "Save Location"). */
   places: Place[];
@@ -91,6 +93,7 @@ export const DEFAULT_CONFIG: Config = {
     autostart: false,
     zoom: 1,
     alwaysOnTop: false,
+    autoUpdate: true,
   },
   places: [],
   map: {

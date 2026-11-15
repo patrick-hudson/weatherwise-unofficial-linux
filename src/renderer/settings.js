@@ -282,6 +282,25 @@ async function init() {
   renderPrefs(await api.getSitePrefs());
   window.addEventListener('focus', async () => renderPrefs(await api.getSitePrefs()));
 
+  // ----- updates
+  const renderUpdate = (u) => {
+    if (!u) return;
+    const base = u.canSelfUpdate ? 'The AppImage updates itself from GitHub Releases.' : 'This install gets update notices from GitHub Releases.';
+    const msg = {
+      checking: 'Checking for updates…',
+      none: 'You have the latest version.',
+      disabled: 'Updates are off in development builds.',
+      available: `Version ${u.version} is available.`,
+      downloading: `Downloading ${u.version}… ${u.percent ?? 0}%`,
+      ready: `Version ${u.version} is ready — restart to install.`,
+      error: `Update check failed: ${u.message}`,
+    }[u.state];
+    $('update-status').textContent = msg ? `${msg} ${u.state === 'none' || u.state === 'idle' ? base : ''}`.trim() : base;
+  };
+  $('update-check').addEventListener('click', () => api.checkForUpdates());
+  api.onUpdateState(renderUpdate);
+  renderUpdate(await api.getUpdateState());
+
   $('restart').addEventListener('click', () => api.relaunch());
 
   const info = await api.appInfo();

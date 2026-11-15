@@ -19,6 +19,7 @@ import {
   SITE_ORIGIN,
 } from './paths';
 import { AppTray } from './tray';
+import { Updater } from './updater';
 import { MainWindow, PARTITION } from './window';
 
 // ------------------------------------------------------------------ early setup
@@ -75,6 +76,7 @@ const location = new LocationService(() => config.get(), locationCacheFile);
 let tray: AppTray;
 let alerts: AlertService;
 let settingsWin: BrowserWindow | null = null;
+let updater: Updater;
 const alertWins = new Map<string, BrowserWindow>();
 
 const mainWindow = new MainWindow(config, {
@@ -317,6 +319,8 @@ function setupIpc(): void {
       return r.canceled ? null : r.filePaths[0];
     }),
   );
+  ipcMain.handle('update:check', local(() => updater.check(true)));
+  ipcMain.handle('update:state', local(() => ({ ...updater.get(), canSelfUpdate: updater.canSelfUpdate })));
   ipcMain.handle('app:info', local(() => ({ version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, configFile, ozone: process.env.XDG_SESSION_TYPE })));
   ipcMain.handle(
     'app:relaunch',
@@ -351,7 +355,14 @@ function main(): void {
   setupSession();
   setupIpc();
 
+  updater = new Updater(config);
+  updater.onChange((st) => {
+    if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('update:state', { ...st, canSelfUpdate: updater.canSelfUpdate });
+  });
+  updater.start();
+
   tray = new AppTray(config, {
+    checkForUpdates: () => void updater.check(true),
     toggleWindow: () => mainWindow.toggle(),
     isWindowVisible: () => mainWindow.isVisible(),
     reload: () => (mainWindow.exists ? mainWindow.reload(false) : mainWindow.show()),
@@ -422,5 +433,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   mainWindow.quitting = true;
   alerts?.stop();
+  updater?.stop();
   location.stop();
 });

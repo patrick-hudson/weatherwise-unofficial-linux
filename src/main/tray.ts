@@ -8,6 +8,7 @@ export interface TrayActions {
   isWindowVisible(): boolean;
   reload(): void;
   openSettings(): void;
+  checkForUpdates(): void;
   openLinkFromClipboard(): void;
   refreshAlerts(): void;
   showAlert(a: ActiveAlert): void;
@@ -105,6 +106,7 @@ export class AppTray {
       },
       { label: 'Open WeatherWise Link from Clipboard', click: () => this.actions.openLinkFromClipboard() },
       { label: 'Settings…', click: () => this.actions.openSettings() },
+      { label: 'Check for Updates…', click: () => this.actions.checkForUpdates() },
       { type: 'separator' },
       { label: 'Quit WeatherWise', click: () => this.actions.quit() },
     ];
