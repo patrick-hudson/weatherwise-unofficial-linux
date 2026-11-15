@@ -103,6 +103,18 @@ export class Updater {
     }
   }
 
+  /** Restart into the downloaded update (AppImage only). */
+  installNow(): boolean {
+    if (this.status.state !== 'ready') return false;
+    autoUpdater.quitAndInstall(false, true);
+    return true;
+  }
+
+  /** Open the GitHub release page (RPM installs update from there). */
+  openReleasePage(): void {
+    void shell.openExternal(RELEASES_URL);
+  }
+
   private async offerRestart(version: string): Promise<void> {
     const r = await dialog.showMessageBox({
       type: 'info',

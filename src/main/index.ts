@@ -292,7 +292,9 @@ function setupIpc(): void {
       return r.canceled ? null : r.filePaths[0];
     }),
   );
-  ipcMain.handle('update:check', local(() => updater.check(true)));
+  ipcMain.handle('update:check', local(() => updater.check(false)));
+  ipcMain.handle('update:install', local(() => updater.installNow()));
+  ipcMain.handle('update:open-release', local(() => updater.openReleasePage()));
   ipcMain.handle('update:state', local(() => ({ ...updater.get(), canSelfUpdate: updater.canSelfUpdate })));
   ipcMain.handle('app:info', local(() => ({ version: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome, configFile, ozone: process.env.XDG_SESSION_TYPE })));
   ipcMain.handle(

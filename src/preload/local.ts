@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('wwLocal', {
   retry: () => ipcRenderer.invoke('site:retry'),
   pickSoundFile: () => ipcRenderer.invoke('dialog:pick-sound'),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  openReleasePage: () => ipcRenderer.invoke('update:open-release'),
   getUpdateState: () => ipcRenderer.invoke('update:state'),
   onUpdateState: (cb: (s: unknown) => void) => ipcRenderer.on('update:state', (_e, s) => cb(s)),
   appInfo: () => ipcRenderer.invoke('app:info'),

@@ -286,25 +286,33 @@ async function init() {
   // ----- updates
   const renderUpdate = (u) => {
     if (!u) return;
-    const base = u.canSelfUpdate ? 'The AppImage updates itself from GitHub Releases.' : 'This install gets update notices from GitHub Releases.';
     const msg = {
+      idle: u.canSelfUpdate ? 'This AppImage updates itself.' : 'Update notices come from GitHub Releases.',
       checking: 'Checking for updates…',
       none: 'You have the latest version.',
       disabled: 'Updates are off in development builds.',
       available: `Version ${u.version} is available.`,
       downloading: `Downloading ${u.version}… ${u.percent ?? 0}%`,
-      ready: `Version ${u.version} is ready — restart to install.`,
+      ready: `Version ${u.version} is downloaded and ready.`,
       error: `Update check failed: ${u.message}`,
-    }[u.state];
-    $('update-status').textContent = msg ? `${msg} ${u.state === 'none' || u.state === 'idle' ? base : ''}`.trim() : base;
+    }[u.state] ?? '';
+    $('update-status').textContent = msg;
+    $('update-progress').hidden = u.state !== 'downloading';
+    $('update-progress').value = u.percent ?? 0;
+    $('update-install').hidden = u.state !== 'ready';
+    $('update-download').hidden = !(u.state === 'available' && !u.canSelfUpdate);
+    $('update-check').disabled = u.state === 'checking' || u.state === 'downloading';
   };
   $('update-check').addEventListener('click', () => api.checkForUpdates());
+  $('update-install').addEventListener('click', () => api.installUpdate());
+  $('update-download').addEventListener('click', () => api.openReleasePage());
   api.onUpdateState(renderUpdate);
   renderUpdate(await api.getUpdateState());
 
   $('restart').addEventListener('click', () => api.relaunch());
 
   const info = await api.appInfo();
+  $('app-version').textContent = info.version;
   $('about').textContent = `WeatherWise for Linux ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · config: ${info.configFile}. Unofficial wrapper, not affiliated with WeatherWise.`;
 }
 

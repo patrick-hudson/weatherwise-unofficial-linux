@@ -38,8 +38,17 @@
         <input type="number" min="0" max="1440" data-key="general.reloadWhenHiddenMinutes">
       </div>
       <div class="row">
-        <div class="label">Automatic updates<div class="hint" id="update-status">From GitHub Releases. The AppImage updates itself; the RPM tells you when there's a new version.</div></div>
-        <span><button id="update-check">Check Now</button> <input type="checkbox" data-key="general.autoUpdate"></span>
+        <div class="label">Check for updates automatically<div class="hint">From GitHub Releases, at startup and every 6 hours.</div></div>
+        <input type="checkbox" data-key="general.autoUpdate">
+      </div>
+      <div class="row">
+        <div class="label">Version <b id="app-version"></b><div class="hint" id="update-status"></div>
+          <progress id="update-progress" max="100" value="0" hidden style="width:220px;margin-top:6px"></progress></div>
+        <span>
+          <button id="update-check">Check Now</button>
+          <button id="update-install" class="primary" hidden>Restart to Update</button>
+          <button id="update-download" class="primary" hidden>Download</button>
+        </span>
       </div>
       <div class="row"><div class="label">Start on login</div><input type="checkbox" data-key="general.autostart"></div>
       <div class="row"><div class="label">Start hidden in the tray</div><input type="checkbox" data-key="general.startMinimized"></div>
