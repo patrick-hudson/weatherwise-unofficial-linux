@@ -32,10 +32,17 @@ notifications, a tray icon, and saved places that don't need an account.
   - Ctrl+D saves the current view.
   - The pin button in the title bar opens a saved place. Each one can also get
     alerts.
+- **Your real location**: set it by searching a town, using the map center,
+  or picking a saved place (📍 My location). The blue dot and alerts use it
+  instead of the often-wrong system/IP location.
+- **WeatherWise preferences in Settings**: dark mode, time format, data picker,
+  popups, scale bar and units, projection, rotation and tilt, day/night shading,
+  and POI labels. They're synced both ways with the site's own **My
+  Preferences** and **Map Settings**, which you can also open from Settings.
 - **Remembers where you were**: the map reopens at the same position, zoom and
   layers.
 - **Location without Google**: Chromium can't locate you on Linux, so the
-  page's location requests go through geoclue (or a home location you set).
+  page's location requests go through your set location or geoclue.
 - **Tray**
   - Keeps running in the background for alerts (configurable: ask / tray /
     quit).
@@ -89,4 +96,5 @@ menu entry.
 - Dependencies are pinned and audited (`npm audit` reports 0
   vulnerabilities). The only runtime dependency is
   [`@particle/dbus-next`](https://www.npmjs.com/package/@particle/dbus-next),
-  used for geoclue and notifications.
+  used for geoclue and notifications. Town search sends only the typed name to
+  the Open-Meteo geocoding API.

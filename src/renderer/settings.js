@@ -25,14 +25,19 @@ function bindInputs() {
     const v = get(cfg, key);
     if (el.type === 'checkbox') el.checked = !!v;
     else {
-      if (el.tagName === 'SELECT' && v != null && ![...el.options].some((o) => o.value === String(v))) {
-        el.append(new Option(el.dataset.key === 'general.zoom' ? `${Math.round(v * 100)}%` : String(v), String(v)));
+      if (el.dataset.type === 'boolean') {
+        el.value = String(!!v);
+      } else {
+        if (el.tagName === 'SELECT' && v != null && ![...el.options].some((o) => o.value === String(v))) {
+          el.append(new Option(el.dataset.key === 'general.zoom' ? `${Math.round(v * 100)}%` : String(v), String(v)));
+        }
+        el.value = v ?? '';
       }
-      el.value = v ?? '';
     }
     el.addEventListener('change', async () => {
       let value;
       if (el.type === 'checkbox') value = el.checked;
+      else if (el.dataset.type === 'boolean') value = el.value === 'true';
       else if (el.type === 'number' || el.dataset.type === 'number') {
         value = Number(el.value);
         if (!Number.isFinite(value)) return;
@@ -65,12 +70,18 @@ async function saveHomeFromInputs() {
     return;
   }
   $('loc-status').textContent = '';
-  await save({ location: { home: { name: $('home-name').value.trim() || 'Home', lat, lon } } });
+  await save({ location: { home: { name: $('home-name').value.trim() || 'Home', lat, lon }, useDeviceLocation: false } });
+  syncSourceSelect();
 }
-async function setHome(lat, lon, label) {
+function syncSourceSelect() {
+  const sel = document.querySelector('[data-key="location.useDeviceLocation"]');
+  if (sel) sel.value = String(!!cfg.location.useDeviceLocation);
+}
+async function setHome(lat, lon, label, name) {
   const r4 = (n) => Math.round(n * 10000) / 10000;
-  await save({ location: { home: { name: $('home-name').value.trim() || 'Home', lat: r4(lat), lon: r4(lon) } } });
+  await save({ location: { home: { name: name || $('home-name').value.trim() || 'Home', lat: r4(lat), lon: r4(lon) }, useDeviceLocation: false } });
   renderHome();
+  syncSourceSelect();
   $('loc-status').textContent = label;
 }
 
@@ -96,6 +107,8 @@ function renderPlaces() {
     bellLabel.style.cssText = 'display:flex;align-items:center;gap:4px;white-space:nowrap';
     const bell = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!p.alerts });
     bellLabel.append(bell, document.createTextNode('🔔'));
+    const mine = Object.assign(document.createElement('button'), { textContent: '📍', title: 'Use as my location' });
+    mine.addEventListener('click', () => setHome(p.lat, p.lon, `Using "${p.name}" as your location.`, p.name));
     const go = Object.assign(document.createElement('button'), { textContent: 'Show', title: 'Show on map' });
     const del = Object.assign(document.createElement('button'), { textContent: 'Remove', className: 'danger' });
     const update = async (changes) => {
@@ -119,7 +132,7 @@ function renderPlaces() {
       await save({ places: list });
       renderPlaces();
     });
-    row.append(name, lat, lon, bellLabel, go, del);
+    row.append(name, lat, lon, bellLabel, mine, go, del);
     box.append(row);
   });
 }
@@ -205,10 +218,69 @@ async function init() {
 
   api.onConfigChanged((next) => {
     const placesChanged = JSON.stringify(next.places) !== JSON.stringify(cfg.places);
+    const locationChanged = JSON.stringify(next.location) !== JSON.stringify(cfg.location);
     cfg = next;
+    if (locationChanged) {
+      if (!['home-name', 'home-lat', 'home-lon'].includes(document.activeElement?.id)) renderHome();
+      syncSourceSelect();
+    }
     // Re-render the list only when it changed elsewhere (e.g. saved from the map) and isn't being edited.
     if (placesChanged && !$('places').contains(document.activeElement)) renderPlaces();
   });
+
+  // ----- town search
+  const doSearch = async () => {
+    const q = $('loc-search').value.trim();
+    const box = $('loc-results');
+    box.textContent = '';
+    if (!q) return;
+    $('loc-status').textContent = 'Searching…';
+    const results = await api.searchPlace(q);
+    $('loc-status').textContent = results && results.length ? '' : 'No matches.';
+    for (const r of results || []) {
+      const b = Object.assign(document.createElement('button'), { textContent: r.label });
+      b.style.margin = '2px 6px 2px 0';
+      b.addEventListener('click', async () => {
+        $('home-name').value = r.name;
+        await setHome(r.lat, r.lon, `Set to ${r.label}. Use Map Center for an exact spot.`, r.name);
+        box.textContent = '';
+        api.openMapAt(r.lat, r.lon, 11);
+      });
+      box.append(b);
+    }
+  };
+  $('loc-search-btn').addEventListener('click', doSearch);
+  $('loc-search').addEventListener('keydown', (e) => e.key === 'Enter' && doSearch());
+
+  // ----- WeatherWise (site) preferences
+  const prefEls = [...document.querySelectorAll('[data-site-pref]')];
+  const renderPrefs = (prefs) => {
+    const ok = !!prefs;
+    $('ww-prefs-body').style.opacity = ok ? '1' : '.45';
+    $('ww-prefs-hint').innerHTML = ok
+      ? "The same settings as the site's <b>My Preferences</b> and <b>Map Settings</b>; Map options reload the map to apply (your view is kept)."
+      : 'Open the map window to change WeatherWise preferences.';
+    for (const el of prefEls) {
+      el.disabled = !ok;
+      if (!ok) continue;
+      const v = prefs[el.dataset.sitePref];
+      if (el.type === 'checkbox') el.checked = !!v;
+      else if (v != null) el.value = String(v);
+    }
+  };
+  for (const el of prefEls) {
+    el.addEventListener('change', async () => {
+      const value = el.type === 'checkbox' ? el.checked : el.value;
+      const ok = await api.setSitePref(el.dataset.sitePref, value);
+      if (ok) flashSaved();
+    });
+  }
+  for (const b of document.querySelectorAll('[data-site-dialog]')) {
+    b.addEventListener('click', () => api.openSiteDialog(b.dataset.siteDialog));
+  }
+  api.onSitePrefsChanged(renderPrefs);
+  renderPrefs(await api.getSitePrefs());
+  window.addEventListener('focus', async () => renderPrefs(await api.getSitePrefs()));
 
   $('restart').addEventListener('click', () => api.relaunch());
 

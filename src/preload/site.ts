@@ -36,6 +36,11 @@ contextBridge.exposeInMainWorld('wwDesktop', {
   },
   removePlace: (id: string) => ipcRenderer.invoke('places:remove', id),
   setPlaceAlerts: (id: string, on: boolean) => ipcRenderer.invoke('places:alerts', id, on),
+  prefsChanged: (snapshot: unknown) => ipcRenderer.send('wwprefs:changed', snapshot),
+  onGeoChanged: (cb: () => void) => {
+    ipcRenderer.on('geo:changed', () => cb());
+  },
+  setHome: (p: { name: string; lat: number; lon: number }) => ipcRenderer.invoke('location:set-home', p),
 });
 
 contextBridge.executeInMainWorld({
@@ -90,19 +95,23 @@ contextBridge.executeInMainWorld({
         })
         .catch(() => err?.(mkError(2, 'Location unavailable')));
     };
-    const watches = new Map<number, ReturnType<typeof setInterval>>();
+    const watches = new Map<number, { timer: ReturnType<typeof setInterval>; ok: (p: unknown) => void }>();
     let nextWatch = 1;
     const watchPosition = (ok: (p: unknown) => void, err?: (e: unknown) => void) => {
       const id = nextWatch++;
       getCurrentPosition(ok, err);
-      watches.set(id, setInterval(() => getCurrentPosition(ok, () => {}), 30_000));
+      watches.set(id, { ok, timer: setInterval(() => getCurrentPosition(ok, () => {}), 30_000) });
       return id;
     };
     const clearWatch = (id: number) => {
       const t = watches.get(id);
-      if (t) clearInterval(t);
+      if (t) clearInterval(t.timer);
       watches.delete(id);
     };
+    // Location changed in the app (e.g. "Set as my location"): update the dot right away.
+    bridge.onGeoChanged(() => {
+      for (const { ok } of watches.values()) getCurrentPosition(ok, () => {});
+    });
     const geo = { getCurrentPosition, watchPosition, clearWatch };
     try {
       Object.defineProperty(Navigator.prototype, 'geolocation', { configurable: true, get: () => geo });
@@ -274,6 +283,115 @@ contextBridge.executeInMainWorld({
       }
     }).observe(document, { childList: true, subtree: true });
 
+    // ---------- WeatherWise preferences mirror ----------
+    // The site keeps its preferences in Pinia stores. We expose a small, fixed set of
+    // them to the app's Settings window (read + write) and report changes back.
+    type PrefSpec = { store: string; path: string; action?: string; reload?: boolean };
+    const PREFS: Record<string, PrefSpec> = {
+      darkMode: { store: 'settings/preferences', path: 'darkMode', action: 'setDarkMode' },
+      timeFormat: { store: 'settings/preferences', path: 'timeFormat', action: 'setTimeFormat' },
+      leftHanded: { store: 'settings/preferences', path: 'leftHanded' },
+      stayAwake: { store: 'settings/preferences', path: 'stayAwake' },
+      inspectorMode: { store: 'settings/preferences', path: 'inspector_mode' },
+      popupItemsMode: { store: 'settings/preferences', path: 'popupItemsMode', action: 'setPopupItemsMode' },
+      scaleControl: { reload: true, store: 'settings/map', path: 'scale_control' },
+      scaleUnit: { reload: true, store: 'settings/map', path: 'scale_control_unit' },
+      projection: { reload: true, store: 'settings/map', path: 'projection' },
+      rotation: { reload: true, store: 'settings/map', path: 'rotation.enabled', action: 'setRotationEnabled' },
+      pitch: { reload: true, store: 'settings/map', path: 'pitch.enabled', action: 'setPitchEnabled' },
+      dayNight: { reload: true, store: 'settings/map', path: 'day_night.enabled', action: 'setDayNightEnabled' },
+      poiLabels: { reload: true, store: 'settings/map', path: 'poi_labels.enabled' },
+    };
+    const pinia = () => {
+      const el = Array.from(document.querySelectorAll('body, body > *, #app')).find((e: any) => e.__vue_app__) as any;
+      return el?.__vue_app__?.config?.globalProperties?.$pinia ?? null;
+    };
+    const getPath = (o: any, path: string) => path.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
+    const prefsSnapshot = () => {
+      const p = pinia();
+      if (!p) return null;
+      const out: Record<string, unknown> = {};
+      for (const [key, spec] of Object.entries(PREFS)) {
+        const st = p._s.get(spec.store);
+        if (st) out[key] = getPath(st.$state, spec.path);
+      }
+      return out;
+    };
+    // Map options are applied by the site's own settings screen (or on map load), so
+    // after changing those we reload the page; the stores persist and the URL keeps the view.
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => location.reload(), 900);
+    };
+    const setPref = (key: string, value: unknown) => {
+      const spec = PREFS[key];
+      const p = pinia();
+      const st = spec && p?._s.get(spec.store);
+      if (!st) return false;
+      if (spec.reload) setTimeout(scheduleReload, 0);
+      if (spec.action && typeof st[spec.action] === 'function') {
+        st[spec.action](value);
+        return true;
+      }
+      const parts = spec.path.split('.');
+      st.$patch((state: any) => {
+        if (parts.length === 1) state[parts[0]] = value;
+        else {
+          // Replace the parent object so the site's watchers see the change.
+          const [head, ...rest] = parts;
+          const copy = JSON.parse(JSON.stringify(state[head] ?? {}));
+          let cur = copy;
+          for (const k of rest.slice(0, -1)) cur = cur[k] ??= {};
+          cur[rest[rest.length - 1]] = value;
+          state[head] = copy;
+        }
+      });
+      return true;
+    };
+    /** Open one of the site's own dialogs from its WeatherWise menu (e.g. "My Preferences"). */
+    const openSiteMenuItem = async (label: string) => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const findItem = () =>
+        Array.from(document.querySelectorAll('a, button, [role=menuitem], li, div')).find(
+          (e) => (e as HTMLElement).children.length === 0 && (e as HTMLElement).innerText?.trim() === label,
+        ) as HTMLElement | undefined;
+      let item = findItem();
+      if (!item) {
+        const logo = Array.from(document.querySelectorAll('button, [role=button], a')).find((e) =>
+          /^\s*Weather\s*Wise\s*$/i.test((e as HTMLElement).innerText || ''),
+        ) as HTMLElement | undefined;
+        logo?.click();
+        for (let i = 0; i < 20 && !item; i++) {
+          await sleep(100);
+          item = findItem();
+        }
+      }
+      if (!item) return false;
+      (item.closest('a, button, [role=menuitem], li') as HTMLElement | null ?? item).click();
+      return true;
+    };
+    w.__wwPrefs = { get: prefsSnapshot, set: setPref, open: openSiteMenuItem };
+    // Report changes made inside the site (its own dialogs) back to the app.
+    let lastPrefs = '';
+    const reportPrefs = () => {
+      const snap = prefsSnapshot();
+      const json = snap ? JSON.stringify(snap) : '';
+      if (json && json !== lastPrefs) {
+        lastPrefs = json;
+        bridge.prefsChanged(snap);
+      }
+    };
+    const watchPrefs = () => {
+      const p = pinia();
+      if (!p) return setTimeout(watchPrefs, 1000);
+      for (const id of new Set(Object.values(PREFS).map((s) => s.store))) {
+        p._s.get(id)?.$subscribe(() => reportPrefs(), { detached: true });
+      }
+      reportPrefs();
+    };
+    addEventListener('load', () => setTimeout(watchPrefs, 500));
+
     // ---------- saved places on the map ----------
     // The site bundles mapbox-gl as a private module, so there's no global to reach the
     // map. mapbox's Map constructor calls bindAll(..., this), i.e. Function.prototype.bind
@@ -412,7 +530,15 @@ contextBridge.executeInMainWorld({
         closePopup();
         toast(`Removed "${place.name}"`);
       };
-      row.append(bell, del);
+      const home = mk('📍 My location');
+      home.title = 'Use this place as my location (the blue dot and alerts)';
+      home.onclick = async () => {
+        await bridge.setHome({ name: place.name, lat: place.lat, lon: place.lon });
+        closePopup();
+        toast(`"${place.name}" is now your location`);
+      };
+      row.append(home, bell, del);
+      row.style.flexWrap = 'wrap';
       el.append(x, title, sub, row);
       el.addEventListener('mousedown', (e) => e.stopPropagation());
       el.addEventListener('click', (e) => e.stopPropagation());

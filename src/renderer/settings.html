@@ -71,25 +71,32 @@
     </section>
 
     <section class="card">
-      <h2>Location</h2>
+      <h2>My Location</h2>
+      <p class="hint" style="margin-top:0">Used for the blue dot on the map and for weather alerts.</p>
       <div class="row">
-        <div class="label">Use device location<div class="hint">Through the system location service (geoclue). It's often only city-level, so a home location below is more precise.</div></div>
-        <input type="checkbox" data-key="location.useDeviceLocation">
+        <div class="label">Location source<div class="hint">The system location is often a rough guess from your IP address. Set your real spot below for accuracy.</div></div>
+        <select data-key="location.useDeviceLocation" data-type="boolean">
+          <option value="false">My location (set below)</option>
+          <option value="true">System location (geoclue)</option>
+        </select>
       </div>
-      <div class="row">
-        <div class="label">Home location<div class="hint" id="home-hint">Used when device location is off, unavailable or imprecise.</div></div>
+      <div class="loc">
+        <input type="text" id="loc-search" placeholder="Search a town or city, e.g. Springfield, IL">
+        <button id="loc-search-btn">Search</button>
       </div>
+      <div id="loc-results"></div>
       <div class="loc">
         <input type="text" id="home-name" placeholder="Name (e.g. Home)">
         <input type="text" class="coord" id="home-lat" placeholder="Latitude">
         <input type="text" class="coord" id="home-lon" placeholder="Longitude">
       </div>
       <div class="loc">
-        <button id="home-from-device">Use Device Location</button>
         <button id="home-from-map">Use Map Center</button>
+        <button id="home-from-device">Use System Location</button>
         <button id="home-clear" class="danger">Clear</button>
         <span class="hint" id="loc-status"></span>
       </div>
+      <p class="hint">Tip: zoom the map to your house, then press <b>Use Map Center</b> — or click a saved place's marker and choose <b>📍 My location</b>.</p>
     </section>
 
     <section class="card">
@@ -149,6 +156,37 @@
       <div class="row">
         <div class="label">Extra domains allowed in-app<div class="hint">Comma-separated. Everything else opens in your browser.</div></div>
         <input type="text" id="extra-domains" style="width:280px">
+      </div>
+    </section>
+
+    <section class="card" id="ww-prefs">
+      <h2>WeatherWise Preferences</h2>
+      <p class="hint" style="margin-top:0" id="ww-prefs-hint">The same settings as the site's <b>My Preferences</b> and <b>Map Settings</b>; Map options reload the map to apply (your view is kept).</p>
+      <div id="ww-prefs-body">
+        <div class="row"><div class="label">Dark mode</div>
+          <select data-site-pref="darkMode"><option value="off">Off</option><option value="on">On</option></select></div>
+        <div class="row"><div class="label">Time format</div>
+          <select data-site-pref="timeFormat"><option value="h12">12-hour</option><option value="h24">24-hour</option></select></div>
+        <div class="row"><div class="label">Left-handed layout</div><input type="checkbox" data-site-pref="leftHanded"></div>
+        <div class="row"><div class="label">Keep screen awake</div><input type="checkbox" data-site-pref="stayAwake"></div>
+        <div class="row"><div class="label">Data picker<div class="hint">Read values at the map center or under the mouse.</div></div>
+          <select data-site-pref="inspectorMode"><option value="center">Center</option><option value="mouse">Mouse</option></select></div>
+        <div class="row"><div class="label">Map popups</div>
+          <select data-site-pref="popupItemsMode"><option value="list">List</option><option value="single">Single</option></select></div>
+        <div class="row"><div class="label">Map scale bar</div><input type="checkbox" data-site-pref="scaleControl"></div>
+        <div class="row"><div class="label">Scale bar units</div>
+          <select data-site-pref="scaleUnit"><option value="imperial">Imperial (mi)</option><option value="metric">Metric (km)</option></select></div>
+        <div class="row"><div class="label">Map projection</div>
+          <select data-site-pref="projection"><option value="mercator">Flat (Mercator)</option><option value="globe">Globe</option></select></div>
+        <div class="row"><div class="label">Allow map rotation</div><input type="checkbox" data-site-pref="rotation"></div>
+        <div class="row"><div class="label">Allow map tilt (3D pitch)</div><input type="checkbox" data-site-pref="pitch"></div>
+        <div class="row"><div class="label">Day/night shading</div><input type="checkbox" data-site-pref="dayNight"></div>
+        <div class="row"><div class="label">Points of interest labels</div><input type="checkbox" data-site-pref="poiLabels"></div>
+      </div>
+      <div class="loc" style="margin-top:10px">
+        <button data-site-dialog="My Preferences">All Preferences…</button>
+        <button data-site-dialog="Map Settings">Map Settings…</button>
+        <button data-site-dialog="Keyboard Shortcuts">Keyboard Shortcuts…</button>
       </div>
     </section>
 

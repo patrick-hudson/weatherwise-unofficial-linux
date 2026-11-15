@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, powerMonitor, session, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, net, powerMonitor, session, shell } from 'electron';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { AlertService, type ActiveAlert } from './alerts';
@@ -192,6 +192,8 @@ function setupSession(): void {
 function setupIpc(): void {
   const fromLocal = (e: Electron.IpcMainInvokeEvent) => e.senderFrame?.url.startsWith('file:') ?? false;
   const fromSite = (e: Electron.IpcMainInvokeEvent) => e.senderFrame?.url.startsWith(SITE_ORIGIN) ?? false;
+  const local = <A extends unknown[], R>(fn: (...args: A) => R) =>
+    (e: Electron.IpcMainInvokeEvent, ...args: A): R | null => (fromLocal(e) ? fn(...args) : null);
 
   // Site + local
   ipcMain.handle('geo:get', async (e) => {
@@ -225,6 +227,66 @@ function setupIpc(): void {
     return place;
   });
 
+  ipcMain.handle('location:set-home', (e, p: { name?: unknown; lat?: unknown; lon?: unknown }) => {
+    if (!fromSite(e) && !fromLocal(e)) return false;
+    const lat = Number(p?.lat);
+    const lon = Number(p?.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return false;
+    config.update({ location: { home: { name: String(p?.name ?? 'Home').slice(0, 80) || 'Home', lat, lon }, useDeviceLocation: false } });
+    return true;
+  });
+
+  // Town/city search for setting your location (Open-Meteo geocoding; no key, only the typed query is sent).
+  ipcMain.handle(
+    'geo:search',
+    local(async (q: string) => {
+      const query = String(q ?? '').trim().slice(0, 100);
+      if (!query) return [];
+      // "Springfield, IL" -> name "Springfield", admin hint "TX"
+      const [name, hint] = query.split(',').map((x) => x.trim());
+      const url = `https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&name=${encodeURIComponent(name)}`;
+      try {
+        const r = await net.fetch(url, { headers: { 'User-Agent': `weatherwise-linux/${app.getVersion()}` } });
+        const j = (await r.json()) as { results?: Array<{ name: string; latitude: number; longitude: number; admin1?: string; admin1_code?: string; country_code?: string; country?: string }> };
+        const states: Record<string, string> = US_STATES;
+        let res = j.results ?? [];
+        if (hint) {
+          const h = hint.toLowerCase();
+          const filtered = res.filter((x) => [x.admin1, states[(x.admin1 ?? '').toLowerCase()], x.country, x.country_code].some((v) => v && v.toLowerCase() === h));
+          if (filtered.length) res = filtered;
+        }
+        return res.slice(0, 6).map((x) => ({
+          name: x.name,
+          lat: x.latitude,
+          lon: x.longitude,
+          label: [x.name, x.admin1, x.country_code].filter(Boolean).join(', '),
+        }));
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  // WeatherWise (site) preferences, mirrored in Settings.
+  ipcMain.handle('wwprefs:get', local(() => mainWindow.siteEval('window.__wwPrefs ? window.__wwPrefs.get() : null')));
+  ipcMain.handle(
+    'wwprefs:set',
+    local((key: string, value: unknown) => mainWindow.siteEval(`window.__wwPrefs ? window.__wwPrefs.set(${JSON.stringify(String(key))}, ${JSON.stringify(value)}) : false`)),
+  );
+  ipcMain.handle(
+    'wwprefs:open',
+    local((label: string) => {
+      const allowed = ['My Preferences', 'Map Settings', 'Keyboard Shortcuts'];
+      if (!allowed.includes(label)) return false;
+      mainWindow.show();
+      return mainWindow.siteEval(`window.__wwPrefs ? window.__wwPrefs.open(${JSON.stringify(label)}) : false`);
+    }),
+  );
+  ipcMain.on('wwprefs:changed', (e, snap) => {
+    if (!e.senderFrame?.url.startsWith(SITE_ORIGIN)) return;
+    if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('wwprefs:changed', snap);
+  });
+
   ipcMain.handle('places:list', (e) => (fromSite(e) || fromLocal(e) ? config.get().places : []));
   ipcMain.handle('places:remove', (e, id: string) => {
     if (!fromSite(e)) return false;
@@ -238,9 +300,6 @@ function setupIpc(): void {
   });
 
   // Local pages only
-  const local = <A extends unknown[], R>(fn: (...args: A) => R) =>
-    (e: Electron.IpcMainInvokeEvent, ...args: A): R | null => (fromLocal(e) ? fn(...args) : null);
-
   ipcMain.handle('config:get', local(() => config.get()));
   ipcMain.handle('config:set', local((patch: DeepPartial<Config>) => config.update(patch)));
   ipcMain.handle('map:center', local(() => mainWindow.getMapCenter()));
@@ -267,6 +326,16 @@ function setupIpc(): void {
     }),
   );
 }
+
+/** Lower-case US state name -> postal code, so "Springfield, IL" matches admin1 "Illinois". */
+const US_STATES: Record<string, string> = Object.fromEntries(
+  'Alabama AL,Alaska AK,Arizona AZ,Arkansas AR,California CA,Colorado CO,Connecticut CT,Delaware DE,Florida FL,Georgia GA,Hawaii HI,Idaho ID,Illinois IL,Indiana IN,Iowa IA,Kansas KS,Kentucky KY,Louisiana LA,Maine ME,Maryland MD,Massachusetts MA,Michigan MI,Minnesota MN,Mississippi MS,Missouri MO,Montana MT,Nebraska NE,Nevada NV,New Hampshire NH,New Jersey NJ,New Mexico NM,New York NY,North Carolina NC,North Dakota ND,Ohio OH,Oklahoma OK,Oregon OR,Pennsylvania PA,Rhode Island RI,South Carolina SC,South Dakota SD,Tennessee TN,Texas TX,Utah UT,Vermont VT,Virginia VA,Washington WA,West Virginia WV,Wisconsin WI,Wyoming WY,District of Columbia DC,Puerto Rico PR'
+    .split(',')
+    .map((s) => {
+      const i = s.lastIndexOf(' ');
+      return [s.slice(0, i).toLowerCase(), s.slice(i + 1)];
+    }),
+);
 
 /** Saved places with alerts turned on feed the alert service's extra locations. */
 function syncAlertPlaces(): void {
@@ -328,6 +397,7 @@ function main(): void {
   setAutostart(cfg.general.autostart);
   syncAlertPlaces();
   config.onChange((next, prev) => {
+    if (JSON.stringify(next.location) !== JSON.stringify(prev.location)) mainWindow.sendToSite('geo:changed', null);
     if (JSON.stringify(next.places) !== JSON.stringify(prev.places)) {
       syncAlertPlaces();
       mainWindow.sendToSite('places:changed', next.places);

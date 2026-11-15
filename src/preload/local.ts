@@ -16,6 +16,12 @@ contextBridge.exposeInMainWorld('wwLocal', {
   pickSoundFile: () => ipcRenderer.invoke('dialog:pick-sound'),
   appInfo: () => ipcRenderer.invoke('app:info'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
+  getSitePrefs: () => ipcRenderer.invoke('wwprefs:get'),
+  setSitePref: (key: string, value: unknown) => ipcRenderer.invoke('wwprefs:set', key, value),
+  openSiteDialog: (label: string) => ipcRenderer.invoke('wwprefs:open', label),
+  onSitePrefsChanged: (cb: (p: unknown) => void) => ipcRenderer.on('wwprefs:changed', (_e, p) => cb(p)),
+  searchPlace: (q: string) => ipcRenderer.invoke('geo:search', q),
+  setHome: (p: { name: string; lat: number; lon: number }) => ipcRenderer.invoke('location:set-home', p),
   onConfigChanged: (cb: (c: unknown) => void) => ipcRenderer.on('config:changed', (_e, c) => cb(c)),
   onStatus: (cb: (s: unknown) => void) => ipcRenderer.on('status', (_e, s) => cb(s)),
 });

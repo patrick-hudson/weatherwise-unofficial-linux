@@ -821,6 +821,17 @@ export class MainWindow {
     this.win?.setAlwaysOnTop(v);
   }
 
+  /** Evaluate in the site page (main world); null if the map isn't open. */
+  async siteEval(js: string): Promise<unknown> {
+    const wc = this.wc;
+    if (!wc || !wc.getURL().startsWith(SITE_ORIGIN)) return null;
+    try {
+      return await wc.executeJavaScript(js, true);
+    } catch {
+      return null;
+    }
+  }
+
   sendToSite(channel: string, data: unknown): void {
     const wc = this.wc;
     if (wc && wc.getURL().startsWith(SITE_ORIGIN)) wc.send(channel, data);
