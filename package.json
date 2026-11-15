@@ -1,0 +1,109 @@
+{
+  "name": "weatherwise-linux",
+  "productName": "WeatherWise",
+  "version": "0.1.0",
+  "description": "Unofficial Linux desktop wrapper for the WeatherWise web app",
+  "main": "dist/main/index.js",
+  "desktopName": "weatherwise-linux.desktop",
+  "author": {
+    "name": "Patrick Hudson"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "build": "bash scripts/fetch-assets.sh --if-missing && tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --linux AppImage rpm",
+    "dist:appimage": "npm run build && electron-builder --linux AppImage",
+    "fetch-assets": "bash scripts/fetch-assets.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
+    "typescript": "^7.0.2"
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "minimatch": "^11.0.8"
+    },
+    "@electron/universal": {
+      "minimatch": "^11.0.8"
+    }
+  },
+  "dependencies": {
+    "@particle/dbus-next": "^0.11.4"
+  },
+  "homepage": "https://github.com/patrick-hudson/weatherwise-linux",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/patrick-hudson/weatherwise-linux.git"
+  },
+  "build": {
+    "appId": "io.github.patrick_hudson.weatherwise_linux",
+    "productName": "WeatherWise",
+    "executableName": "weatherwise-linux",
+    "artifactName": "WeatherWise-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "assets/**",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "assets/**"
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "protocols": [
+      {
+        "name": "WeatherWise link",
+        "schemes": [
+          "weatherwise-linux"
+        ]
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "rpm"
+      ],
+      "icon": "build/icons",
+      "category": "Network",
+      "synopsis": "Severe weather radar and alerts (unofficial WeatherWise wrapper)",
+      "description": "Unofficial desktop wrapper for the WeatherWise web app with native severe-weather alerts.",
+      "desktop": {
+        "entry": {
+          "Name": "WeatherWise",
+          "GenericName": "Weather Radar",
+          "Comment": "Severe weather radar and alerts",
+          "Categories": "Network;Utility;",
+          "Keywords": "weather;radar;storm;tornado;alerts;",
+          "StartupWMClass": "weatherwise-linux"
+        }
+      },
+      "maintainer": "Patrick Hudson <patrick-hudson@users.noreply.github.com>"
+    },
+    "rpm": {
+      "depends": [
+        "libnotify",
+        "libsecret"
+      ],
+      "fpm": [
+        "--rpm-rpmbuild-define=_build_id_links none"
+      ]
+    }
+  }
+}

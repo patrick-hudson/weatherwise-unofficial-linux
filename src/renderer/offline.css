@@ -1,0 +1,4 @@
+body { display: grid; place-items: center; min-height: 100vh; }
+.center { text-align: center; max-width: 440px; padding: 24px; }
+.center img { border-radius: 18px; margin-bottom: 16px; }
+.center h1 { margin-bottom: 8px; }

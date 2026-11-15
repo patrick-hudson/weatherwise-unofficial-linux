@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'">
+  <title>Weather Alert</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <img src="../../assets/icons/icon.png" alt="">
+    <div>
+      <h1 id="event">Loading…</h1>
+      <div class="hint" id="area"></div>
+    </div>
+    <span class="spacer"></span>
+    <span class="pill" id="sev"></span>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Summary</h2>
+      <p id="headline" style="margin-top:0"></p>
+      <div class="hint" id="times"></div>
+      <div class="loc" style="margin-top:12px">
+        <button class="primary" id="map">Show on Map</button>
+        <button id="web">Open on weather.gov</button>
+      </div>
+    </section>
+    <section class="card" id="instruction-card">
+      <h2>What to do</h2>
+      <pre id="instruction"></pre>
+    </section>
+    <section class="card">
+      <h2>Details</h2>
+      <pre id="description"></pre>
+      <p class="hint" id="sender"></p>
+    </section>
+  </main>
+  <script src="alert.js"></script>
+</body>
+</html>

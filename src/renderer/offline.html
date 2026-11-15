@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'">
+  <title>WeatherWise — Offline</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="offline.css">
+</head>
+<body>
+  <div class="center">
+    <img src="../../assets/icons/icon.png" alt="" width="96" height="96">
+    <h1>Can't reach WeatherWise</h1>
+    <p class="hint" id="reason"></p>
+    <p>Check your internet connection. This page reconnects automatically when the network is back.</p>
+    <button class="primary" id="retry">Try Again</button>
+  </div>
+  <script src="offline.js"></script>
+</body>
+</html>

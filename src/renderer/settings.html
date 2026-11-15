@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'">
+  <title>WeatherWise Settings</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <img src="../../assets/icons/icon.png" alt="">
+    <h1>Settings</h1>
+    <span class="spacer"></span>
+    <span id="saved">Saved</span>
+  </header>
+  <main>
+    <div class="notice" id="restart-notice">
+      <span>Some changes take effect after restarting WeatherWise.</span>
+      <button class="primary" id="restart">Restart Now</button>
+    </div>
+
+    <section class="card">
+      <h2>General</h2>
+      <div class="row">
+        <div class="label">When the window is closed<div class="hint">Keep running to get alerts from the tray.</div></div>
+        <select data-key="general.closeAction">
+          <option value="ask">Ask me</option>
+          <option value="tray">Keep running in the tray</option>
+          <option value="quit">Quit</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="label">Free memory when hidden after (minutes)<div class="hint">Closes the map in the background; alerts keep working. 0 = never.</div></div>
+        <input type="number" min="0" max="1440" data-key="general.unloadWhenHiddenMinutes">
+      </div>
+      <div class="row">
+        <div class="label">Refresh the map when shown after (minutes)<div class="hint">Radar data goes stale while hidden. 0 = never.</div></div>
+        <input type="number" min="0" max="1440" data-key="general.reloadWhenHiddenMinutes">
+      </div>
+      <div class="row"><div class="label">Start on login</div><input type="checkbox" data-key="general.autostart"></div>
+      <div class="row"><div class="label">Start hidden in the tray</div><input type="checkbox" data-key="general.startMinimized"></div>
+      <div class="row"><div class="label">Always on top</div><input type="checkbox" data-key="general.alwaysOnTop"></div>
+      <div class="row">
+        <div class="label">Interface scale<div class="hint">Size of the whole page. Also Ctrl + / Ctrl − / Ctrl 0 in the main window.</div></div>
+        <select data-key="general.zoom" data-type="number">
+          <option value="0.7">70%</option><option value="0.8">80%</option><option value="0.9">90%</option>
+          <option value="1">100%</option><option value="1.1">110%</option><option value="1.2">120%</option>
+          <option value="1.3">130%</option><option value="1.5">150%</option><option value="1.75">175%</option><option value="2">200%</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Map</h2>
+      <div class="row">
+        <div class="label">Reopen the map where I left it<div class="hint">Remembers position, zoom and layers between launches.</div></div>
+        <input type="checkbox" data-key="map.restoreLastView">
+      </div>
+      <div class="row">
+        <div class="label">Map zoom when opening an alert</div>
+        <select data-key="map.alertZoom" data-type="number">
+          <option value="5">State</option>
+          <option value="6">Region</option>
+          <option value="7">Several counties</option>
+          <option value="8">County</option>
+          <option value="9">Close</option>
+          <option value="10">City</option>
+          <option value="11">Neighborhood</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Location</h2>
+      <div class="row">
+        <div class="label">Use device location<div class="hint">Through the system location service (geoclue). It's often only city-level, so a home location below is more precise.</div></div>
+        <input type="checkbox" data-key="location.useDeviceLocation">
+      </div>
+      <div class="row">
+        <div class="label">Home location<div class="hint" id="home-hint">Used when device location is off, unavailable or imprecise.</div></div>
+      </div>
+      <div class="loc">
+        <input type="text" id="home-name" placeholder="Name (e.g. Home)">
+        <input type="text" class="coord" id="home-lat" placeholder="Latitude">
+        <input type="text" class="coord" id="home-lon" placeholder="Longitude">
+      </div>
+      <div class="loc">
+        <button id="home-from-device">Use Device Location</button>
+        <button id="home-from-map">Use Map Center</button>
+        <button id="home-clear" class="danger">Clear</button>
+        <span class="hint" id="loc-status"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Severe Weather Alerts</h2>
+      <p class="hint" style="margin-top:0">Desktop notifications from the National Weather Service (US only) for your location and any places you add.</p>
+      <div class="row"><div class="label">Enable alerts</div><input type="checkbox" data-key="alerts.enabled"></div>
+      <div class="row"><div class="label">Watch my current/home location</div><input type="checkbox" data-key="alerts.watchCurrentLocation"></div>
+      <div class="row">
+        <div class="label">Minimum severity</div>
+        <select data-key="alerts.minSeverity">
+          <option value="Extreme">Extreme only</option>
+          <option value="Severe">Severe and above</option>
+          <option value="Moderate">Moderate and above</option>
+          <option value="Minor">Everything</option>
+        </select>
+      </div>
+      <div class="row"><div class="label">Only warnings and emergencies<div class="hint">Skip watches, advisories and statements.</div></div><input type="checkbox" data-key="alerts.onlyWarnings"></div>
+      <div class="row">
+        <div class="label">Only these events<div class="hint">Comma-separated, e.g. "Tornado Warning, Severe Thunderstorm Warning". Empty = all.</div></div>
+        <input type="text" id="event-filter" style="width:280px">
+      </div>
+      <div class="row"><div class="label">How often to check (seconds)</div><input type="number" min="30" max="3600" data-key="alerts.pollSeconds"></div>
+      <div class="row"><div class="label">Play a sound</div><input type="checkbox" data-key="alerts.sound"></div>
+      <div class="row">
+        <div class="label">Sound file<div class="hint" id="sound-file">Built-in alert tone</div></div>
+        <span><button id="sound-pick">Choose…</button> <button id="sound-reset">Default</button></span>
+      </div>
+      <div class="row"><div class="label">Quiet hours</div><input type="checkbox" data-key="alerts.quietHours.enabled"></div>
+      <div class="row">
+        <div class="label">From / to</div>
+        <span><input type="time" data-key="alerts.quietHours.start"> – <input type="time" data-key="alerts.quietHours.end"></span>
+      </div>
+      <div class="row"><div class="label">Extreme alerts break through quiet hours</div><input type="checkbox" data-key="alerts.quietHours.extremeBreaksThrough"></div>
+
+      <div class="row"><div class="label">Other places to watch<div class="hint">Turn on 🔔 for any saved place in the Places section below.</div></div></div>
+
+      <div class="loc" style="margin-top:12px">
+        <button class="primary" id="test-alert">Send Test Alert</button>
+        <button id="check-now">Check Now</button>
+        <span class="hint" id="alert-status"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Places</h2>
+      <p class="hint" style="margin-top:0">Saved on this computer, no WeatherWise account needed. Right-click the map → <b>Save Location</b>, press <b>Ctrl+D</b> to save the current view, or add one here. Open them from the pin button in the title bar.</p>
+      <div id="places"></div>
+      <div class="loc" style="margin-top:8px">
+        <button id="add-place">Add Current Map View</button>
+        <span class="hint" id="places-status"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Links</h2>
+      <div class="row"><div class="label">Open hazcams inside the app<div class="hint">Off = open them in your web browser.</div></div><input type="checkbox" data-key="links.hazcamsInApp"></div>
+      <div class="row">
+        <div class="label">Extra domains allowed in-app<div class="hint">Comma-separated. Everything else opens in your browser.</div></div>
+        <input type="text" id="extra-domains" style="width:280px">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Advanced</h2>
+      <div class="row">
+        <div class="label">Graphics<div class="hint">Restart required.</div></div>
+        <select data-key="advanced.gpuMode" data-restart>
+          <option value="auto">Automatic</option>
+          <option value="ignore-blocklist">Force GPU acceleration</option>
+          <option value="nvidia">Use NVIDIA GPU (PRIME offload)</option>
+          <option value="disable-gpu">Disable GPU acceleration</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="label">Display server<div class="hint">Restart required. Automatic = native Wayland on a Wayland session.</div></div>
+        <select data-key="advanced.ozonePlatform" data-restart>
+          <option value="auto">Automatic</option>
+          <option value="wayland">Wayland</option>
+          <option value="x11">X11 / XWayland</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="label">User agent override<div class="hint">Leave empty for the default.</div></div>
+        <input type="text" data-key="advanced.userAgentOverride" style="width:280px">
+      </div>
+      <div class="row"><div class="label">Enable developer tools (Ctrl+Shift+I)</div><input type="checkbox" data-key="advanced.devtools"></div>
+      <p class="hint" id="about"></p>
+    </section>
+  </main>
+  <script src="settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'">
+  <title>titlebar</title>
+  <link rel="stylesheet" href="titlebar.css">
+</head>
+<body>
+  <div class="bar" id="bar">
+    <div class="group left" id="left"></div>
+    <div class="group nav">
+      <button class="icon" id="back" title="Back (Alt+Left)">
+        <svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg>
+      </button>
+      <button class="icon" id="forward" title="Forward (Alt+Right)">
+        <svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></svg>
+      </button>
+      <button class="icon" id="reload" title="Reload (F5)">
+        <svg viewBox="0 0 16 16" class="reload"><path d="M13 8a5 5 0 1 1-1.6-3.7"/><path d="M13 2.5v3h-3"/></svg>
+      </button>
+    </div>
+    <div class="title drag" id="title-area">
+      <span class="wordmark">Weather<span class="wise">Wise</span></span>
+    </div>
+    <div class="group tools">
+      <button class="alert-chip" id="alerts" title="Active weather alerts" hidden>
+        <svg viewBox="0 0 16 16"><path d="M8 2 1.5 13.5h13z"/><path d="M8 6.5v3.2M8 11.6v.1"/></svg>
+        <span id="alerts-text"></span>
+      </button>
+      <button class="icon" id="places" title="Saved places (Ctrl+D to save the current view)">
+        <svg viewBox="0 0 16 16"><path d="M8 14.5s4.5-4.2 4.5-7.8a4.5 4.5 0 0 0-9 0c0 3.6 4.5 7.8 4.5 7.8z"/><circle cx="8" cy="6.6" r="1.6"/></svg>
+      </button>
+      <button class="icon" id="settings" title="Settings (Ctrl+,)">
+        <svg viewBox="0 0 24 24" class="gear"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+    <div class="group right" id="right"></div>
+  </div>
+  <template id="tpl-menu">
+    <button class="appmenu" data-act="menu" title="Menu">
+      <img src="../../assets/icons/icon.png" alt="">
+    </button>
+  </template>
+  <template id="tpl-minimize">
+    <button class="wc" data-act="minimize" title="Minimize">
+      <svg viewBox="0 0 16 16"><path d="m4 6.5 4 4 4-4"/></svg>
+    </button>
+  </template>
+  <template id="tpl-maximize">
+    <button class="wc" data-act="maximize" title="Maximize">
+      <svg viewBox="0 0 16 16" class="max"><path d="m4 10 4-4 4 4"/></svg>
+      <svg viewBox="0 0 16 16" class="restore"><path d="M8 3.5 12.5 8 8 12.5 3.5 8z"/></svg>
+    </button>
+  </template>
+  <template id="tpl-close">
+    <button class="wc close" data-act="close" title="Close">
+      <svg viewBox="0 0 16 16"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg>
+    </button>
+  </template>
+  <script src="titlebar.js"></script>
+</body>
+</html>

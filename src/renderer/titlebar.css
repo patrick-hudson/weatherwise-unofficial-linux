@@ -1,0 +1,59 @@
+:root {
+  --bg: #17274f;
+  --bg-inactive: #1b2b55;
+  --fg: #eef2fb;
+  --fg-dim: #8f9dc0;
+  --hover: rgba(255, 255, 255, 0.12);
+  --press: rgba(255, 255, 255, 0.2);
+  --accent: #f6b91a;
+  --close: #da4453; /* Breeze close red */
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
+  font: 13px/1 "Noto Sans", system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
+.bar { display: flex; align-items: center; height: 100%; padding: 0 6px; gap: 2px;
+  -webkit-app-region: drag; border-bottom: 1px solid rgba(0, 0, 0, 0.35); }
+body.inactive .bar { background: var(--bg-inactive); }
+body.inactive .wordmark, body.inactive svg { opacity: 0.6; }
+button { -webkit-app-region: no-drag; border: 0; background: transparent; color: inherit; padding: 0; margin: 0;
+  display: grid; place-items: center; cursor: default; font: inherit; }
+.group { display: flex; align-items: center; gap: 2px; }
+.title { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; min-width: 40px; overflow: hidden; }
+.wordmark { font-weight: 700; font-size: 14px; letter-spacing: 0.01em; white-space: nowrap; }
+.wordmark .wise { color: var(--accent); }
+svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.icon { width: 30px; height: 28px; border-radius: 6px; color: var(--fg); }
+.icon:hover { background: var(--hover); }
+.icon:active { background: var(--press); }
+.icon:disabled { color: var(--fg-dim); opacity: 0.45; background: transparent; }
+.nav { margin-left: 4px; }
+body.loading .reload { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.appmenu { width: 30px; height: 28px; border-radius: 6px; }
+.appmenu img { width: 20px; height: 20px; border-radius: 4px; }
+.appmenu:hover { background: var(--hover); }
+
+/* Breeze-like window buttons: round, glyph inverts on hover */
+.right { margin-left: 6px; gap: 6px; }
+.left { gap: 6px; }
+.wc { width: 20px; height: 20px; border-radius: 50%; color: var(--fg); }
+.wc svg { width: 14px; height: 14px; stroke-width: 1.6; }
+.wc:hover { background: var(--fg); color: var(--bg); }
+.wc:active { background: var(--fg-dim); }
+.wc.close:hover { background: var(--close); color: #fff; }
+.wc .restore { display: none; }
+body.maximized .wc .max { display: none; }
+body.maximized .wc .restore { display: block; }
+
+.alert-chip { -webkit-app-region: no-drag; height: 24px; display: flex; gap: 6px; align-items: center; padding: 0 10px 0 8px;
+  border-radius: 12px; background: #c62828; color: #fff; font-weight: 600; font-size: 12px; margin-right: 4px; max-width: 320px; }
+.alert-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alert-chip.sev-Extreme { background: #8e24aa; animation: pulse 1.6s ease-in-out infinite; }
+.alert-chip.sev-Moderate { background: #e65100; }
+.alert-chip.sev-Minor, .alert-chip.sev-Unknown { background: #546e7a; }
+.alert-chip:hover { filter: brightness(1.12); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(142, 36, 170, 0.35); } }
+.gear { stroke-width: 1.8; }
