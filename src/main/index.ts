@@ -300,7 +300,12 @@ function setupIpc(): void {
   ipcMain.handle(
     'app:relaunch',
     local(() => {
-      app.relaunch();
+      // A downloaded update installs and relaunches the new AppImage itself.
+      if (updater.installNow()) return;
+      // Inside an AppImage, execPath points into a temporary mount that disappears on exit,
+      // so relaunch the AppImage file instead.
+      if (process.env.APPIMAGE) app.relaunch({ execPath: process.env.APPIMAGE, args: process.argv.slice(1) });
+      else app.relaunch();
       quit();
     }),
   );
