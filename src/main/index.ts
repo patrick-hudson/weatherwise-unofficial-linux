@@ -1,10 +1,11 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, net, powerMonitor, session, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, powerMonitor, session, shell } from 'electron';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { AlertService, type ActiveAlert } from './alerts';
 import { setAutostart } from './autostart';
 import { randomUUID } from 'node:crypto';
 import { ConfigStore, type Config, type DeepPartial, type Place } from './config';
+import { searchLocation } from './geocode';
 import { LocationService } from './geo';
 import { normalizeAppUrl } from './nav';
 import {
@@ -238,36 +239,8 @@ function setupIpc(): void {
     return true;
   });
 
-  // Town/city search for setting your location (Open-Meteo geocoding; no key, only the typed query is sent).
-  ipcMain.handle(
-    'geo:search',
-    local(async (q: string) => {
-      const query = String(q ?? '').trim().slice(0, 100);
-      if (!query) return [];
-      // "Springfield, IL" -> name "Springfield", admin hint "TX"
-      const [name, hint] = query.split(',').map((x) => x.trim());
-      const url = `https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&name=${encodeURIComponent(name)}`;
-      try {
-        const r = await net.fetch(url, { headers: { 'User-Agent': `weatherwise-linux/${app.getVersion()}` } });
-        const j = (await r.json()) as { results?: Array<{ name: string; latitude: number; longitude: number; admin1?: string; admin1_code?: string; country_code?: string; country?: string }> };
-        const states: Record<string, string> = US_STATES;
-        let res = j.results ?? [];
-        if (hint) {
-          const h = hint.toLowerCase();
-          const filtered = res.filter((x) => [x.admin1, states[(x.admin1 ?? '').toLowerCase()], x.country, x.country_code].some((v) => v && v.toLowerCase() === h));
-          if (filtered.length) res = filtered;
-        }
-        return res.slice(0, 6).map((x) => ({
-          name: x.name,
-          lat: x.latitude,
-          lon: x.longitude,
-          label: [x.name, x.admin1, x.country_code].filter(Boolean).join(', '),
-        }));
-      } catch {
-        return [];
-      }
-    }),
-  );
+  // Address / town search for setting your location (only the typed text is sent).
+  ipcMain.handle('geo:search', local((q: string) => searchLocation(q)));
 
   // WeatherWise (site) preferences, mirrored in Settings.
   ipcMain.handle('wwprefs:get', local(() => mainWindow.siteEval('window.__wwPrefs ? window.__wwPrefs.get() : null')));
@@ -330,16 +303,6 @@ function setupIpc(): void {
     }),
   );
 }
-
-/** Lower-case US state name -> postal code, so "Springfield, IL" matches admin1 "Illinois". */
-const US_STATES: Record<string, string> = Object.fromEntries(
-  'Alabama AL,Alaska AK,Arizona AZ,Arkansas AR,California CA,Colorado CO,Connecticut CT,Delaware DE,Florida FL,Georgia GA,Hawaii HI,Idaho ID,Illinois IL,Indiana IN,Iowa IA,Kansas KS,Kentucky KY,Louisiana LA,Maine ME,Maryland MD,Massachusetts MA,Michigan MI,Minnesota MN,Mississippi MS,Missouri MO,Montana MT,Nebraska NE,Nevada NV,New Hampshire NH,New Jersey NJ,New Mexico NM,New York NY,North Carolina NC,North Dakota ND,Ohio OH,Oklahoma OK,Oregon OR,Pennsylvania PA,Rhode Island RI,South Carolina SC,South Dakota SD,Tennessee TN,Texas TX,Utah UT,Vermont VT,Virginia VA,Washington WA,West Virginia WV,Wisconsin WI,Wyoming WY,District of Columbia DC,Puerto Rico PR'
-    .split(',')
-    .map((s) => {
-      const i = s.lastIndexOf(' ');
-      return [s.slice(0, i).toLowerCase(), s.slice(i + 1)];
-    }),
-);
 
 /** Saved places with alerts turned on feed the alert service's extra locations. */
 function syncAlertPlaces(): void {

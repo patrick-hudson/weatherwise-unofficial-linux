@@ -238,13 +238,14 @@ async function init() {
     const results = await api.searchPlace(q);
     $('loc-status').textContent = results && results.length ? '' : 'No matches.';
     for (const r of results || []) {
-      const b = Object.assign(document.createElement('button'), { textContent: r.label });
+      const b = Object.assign(document.createElement('button'), { textContent: (r.kind === 'address' ? '🏠 ' : '📍 ') + r.label });
       b.style.margin = '2px 6px 2px 0';
       b.addEventListener('click', async () => {
+        const exact = r.kind === 'address';
         $('home-name').value = r.name;
-        await setHome(r.lat, r.lon, `Set to ${r.label}. Use Map Center for an exact spot.`, r.name);
+        await setHome(r.lat, r.lon, exact ? `Home set to ${r.label}.` : `Set to ${r.label} (town center). Search your street address for an exact spot.`, r.name);
         box.textContent = '';
-        api.openMapAt(r.lat, r.lon, 11);
+        api.openMapAt(r.lat, r.lon, exact ? 16 : 11);
       });
       box.append(b);
     }

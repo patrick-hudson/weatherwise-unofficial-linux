@@ -32,7 +32,7 @@ notifications, a tray icon, and saved places that don't need an account.
   - Ctrl+D saves the current view.
   - The pin button in the title bar opens a saved place. Each one can also get
     alerts.
-- **Your real location**: set it by searching a town, using the map center,
+- **Your real location**: set it by searching your street address (exact) or a town, using the map center,
   or picking a saved place (📍 My location). The blue dot and alerts use it
   instead of the often-wrong system/IP location.
 - **WeatherWise preferences in Settings**: dark mode, time format, data picker,
