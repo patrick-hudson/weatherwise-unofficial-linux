@@ -31,8 +31,11 @@ const used = git('tag', '--list', `v${prefix}*`)
 const version = `${prefix}${used.length ? Math.max(...used) + 1 : 0}`;
 
 console.log(`Releasing v${version}`);
-run('npm', ['version', version, '--no-git-tag-version']);
-run('git', ['commit', '-am', `Release v${version}`]);
+const current = JSON.parse(execFileSync('git', ['show', 'HEAD:package.json'], { encoding: 'utf8' })).version;
+if (current !== version) {
+  run('npm', ['version', version, '--no-git-tag-version']);
+  run('git', ['commit', '-am', `Release v${version}`]);
+}
 run('git', ['tag', '-a', `v${version}`, '-m', `WeatherWise for Linux ${version}`]);
 run('git', ['push', 'origin', 'main', `v${version}`]);
 console.log(dry ? 'Dry run done.' : `Pushed v${version}; GitHub Actions is building the release.`);
