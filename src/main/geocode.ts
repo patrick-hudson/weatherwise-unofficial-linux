@@ -19,7 +19,7 @@ const US_STATES: Record<string, string> = Object.fromEntries(
     }),
 );
 
-const ua = () => `weatherwise-linux/${app.getVersion()} (+https://github.com/patrick-hudson/weatherwise-linux)`;
+const ua = () => `weatherwise-linux/${app.getVersion()} (+https://github.com/patrick-hudson/weatherwise-unofficial-linux)`;
 
 async function getJson<T>(url: string, timeoutMs = 10_000): Promise<T | null> {
   try {

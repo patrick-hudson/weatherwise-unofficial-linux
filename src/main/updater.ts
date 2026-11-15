@@ -2,7 +2,7 @@ import { app, dialog, shell } from 'electron';
 import { autoUpdater, type UpdateInfo } from 'electron-updater';
 import type { ConfigStore } from './config';
 
-const RELEASES_URL = 'https://github.com/patrick-hudson/weatherwise-linux/releases/latest';
+const RELEASES_URL = 'https://github.com/patrick-hudson/weatherwise-unofficial-linux/releases/latest';
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 
 export type UpdateState =

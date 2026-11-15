@@ -37,10 +37,10 @@
     "@particle/dbus-next": "^0.11.4",
     "electron-updater": "^6.8.11"
   },
-  "homepage": "https://github.com/patrick-hudson/weatherwise-linux",
+  "homepage": "https://github.com/patrick-hudson/weatherwise-unofficial-linux",
   "repository": {
     "type": "git",
-    "url": "https://github.com/patrick-hudson/weatherwise-linux.git"
+    "url": "https://github.com/patrick-hudson/weatherwise-unofficial-linux.git"
   },
   "build": {
     "appId": "io.github.patrick_hudson.weatherwise_linux",
@@ -111,7 +111,7 @@
       {
         "provider": "github",
         "owner": "patrick-hudson",
-        "repo": "weatherwise-linux",
+        "repo": "weatherwise-unofficial-linux",
         "releaseType": "release"
       }
     ]
