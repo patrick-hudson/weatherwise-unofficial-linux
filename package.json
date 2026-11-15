@@ -1,7 +1,7 @@
 {
   "name": "weatherwise-linux",
   "productName": "WeatherWise",
-  "version": "2026.11.150258",
+  "version": "2026.11.150352",
   "description": "Unofficial Linux desktop wrapper for the WeatherWise web app",
   "main": "dist/main/index.js",
   "desktopName": "weatherwise-linux.desktop",
